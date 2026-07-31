@@ -1,0 +1,68 @@
+<!-- Mobile Hamburger Button -->
+<button class="hamburger-btn" (click)="toggleSidebar()">
+  <i class="ti ti-menu-2"></i>
+</button>
+
+<!-- Overlay — mobile pe sidebar ke peeche -->
+@if (isOpen()) {
+  <div class="sidebar-overlay" (click)="closeSidebar()"></div>
+}
+
+<!-- Sidebar -->
+<aside class="sidebar" [class.open]="isOpen()">
+
+  <div class="sidebar-top">
+    <div class="logo">
+      <span class="logo-dot"></span>
+      FlowBill
+    </div>
+    <button class="close-sidebar-btn" (click)="closeSidebar()">
+      <i class="ti ti-x"></i>
+    </button>
+  </div>
+
+  <nav class="nav">
+    <p class="nav-section">Main</p>
+
+    @for (item of navItems; track item.route) {
+      <a [routerLink]="item.route"
+         routerLinkActive="active"
+         class="nav-item"
+         (click)="closeSidebar()">
+        <i class="ti {{ item.icon }}"></i>
+        {{ item.label }}
+      </a>
+    }
+
+    <p class="nav-section" style="margin-top: 16px;">Manage</p>
+
+    @for (item of bottomItems; track item.route) {
+      <a [routerLink]="item.route"
+         routerLinkActive="active"
+         class="nav-item"
+         (click)="closeSidebar()">
+        <i class="ti {{ item.icon }}"></i>
+        {{ item.label }}
+      </a>
+    }
+  </nav>
+
+  <div class="sidebar-footer">
+    <div class="footer-top">
+      <div class="user-avatar">SJ</div>
+      <div>
+        <div class="user-name">Sanju</div>
+        <div class="user-role">Freelancer</div>
+      </div>
+    </div>
+
+    <button class="theme-toggle" (click)="theme.toggle()">
+      <i class="ti" [class.ti-moon]="theme.isDark()" [class.ti-sun]="!theme.isDark()"></i>
+      {{ theme.isDark() ? 'Dark Mode' : 'Light Mode' }}
+      <span class="toggle-pill">
+        <span class="toggle-knob" [class.right]="!theme.isDark()"></span>
+      </span>
+    </button>
+  </div>
+
+</aside>

@@ -1,0 +1,129 @@
+<div class="dashboard">
+
+  <!-- Top Bar -->
+  <div class="topbar">
+    <div>
+      <h1 class="page-title">Good morning, Sanju 👋</h1>
+      <p class="page-sub">
+        {{ summary.overdueCount }} invoices need your attention
+      </p>
+    </div>
+    <button class="btn-primary" (click)="goToNewInvoice()">
+      <i class="ti ti-plus"></i>
+      New Invoice
+    </button>
+  </div>
+
+  <!-- Stat Cards -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-label">Total Earned</div>
+      <div class="stat-value">{{ formatAmount(summary.totalEarned) }}</div>
+      <div class="stat-change positive">All time</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Pending</div>
+      <div class="stat-value text-warning">{{ formatAmount(summary.totalPending) }}</div>
+      <div class="stat-change">Awaiting payment</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Overdue</div>
+      <div class="stat-value text-danger">{{ formatAmount(summary.totalOverdue) }}</div>
+      <div class="stat-change negative">{{ summary.overdueCount }} invoices</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Active Clients</div>
+      <div class="stat-value">{{ summary.activeClients }}</div>
+      <div class="stat-change">Total clients</div>
+    </div>
+  </div>
+
+  <!-- Rupee Flow Bar -->
+  <div class="flow-bar">
+    <div class="flow-top">
+      <span class="flow-title">Rupee Flow</span>
+    </div>
+    <div class="flow-track">
+      <div class="flow-earned"  [style.width]="earnedPct  + '%'"></div>
+      <div class="flow-pending" [style.width]="pendingPct + '%'"></div>
+      <div class="flow-overdue" [style.width]="overduePct + '%'"></div>
+    </div>
+    <div class="flow-legend">
+      <div class="legend-item">
+        <span class="legend-dot earned"></span>
+        Earned {{ formatAmount(summary.totalEarned) }}
+      </div>
+      <div class="legend-item">
+        <span class="legend-dot pending"></span>
+        Pending {{ formatAmount(summary.totalPending) }}
+      </div>
+      <div class="legend-item">
+        <span class="legend-dot overdue"></span>
+        Overdue {{ formatAmount(summary.totalOverdue) }}
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom Grid -->
+  <div class="bottom-grid">
+
+    <!-- Recent Invoices -->
+    <div class="panel">
+      <div class="panel-header">
+        <span>Recent Invoices</span>
+        <span class="panel-link" (click)="goToNewInvoice()">View all</span>
+      </div>
+
+      @if (loading) {
+        <div class="panel-loading">Loading...</div>
+      }
+
+      @for (inv of summary.recentInvoices; track inv.id) {
+        <div class="invoice-row">
+          <div class="avatar avatar-accent">
+            {{ getInitials(inv.clientName) }}
+          </div>
+          <div class="inv-info">
+            <div class="inv-name">{{ inv.clientName }}</div>
+            <div class="inv-num">{{ inv.invoiceNumber }}</div>
+          </div>
+          <div class="inv-right">
+            <div class="inv-amount">{{ formatAmount(inv.amount) }}</div>
+            <span class="badge" [class]="'badge-' + inv.status.toLowerCase()">
+              {{ inv.status }}
+            </span>
+          </div>
+        </div>
+      }
+
+      @if (!loading && summary.recentInvoices.length === 0) {
+        <div class="panel-empty">No invoices yet</div>
+      }
+    </div>
+
+    <!-- Top Clients -->
+    <div class="panel">
+      <div class="panel-header">
+        <span>Clients</span>
+        <span class="panel-link">Manage</span>
+      </div>
+
+      @for (client of summary.topClients; track client.id) {
+        <div class="client-row">
+          <div class="avatar avatar-accent">
+            {{ getInitials(client.name) }}
+          </div>
+          <div class="client-info">
+            <div class="client-name">{{ client.name }}</div>
+            <div class="client-meta">{{ client.companyName }}</div>
+          </div>
+        </div>
+      }
+
+      @if (!loading && summary.topClients.length === 0) {
+        <div class="panel-empty">No clients yet</div>
+      }
+    </div>
+
+  </div>
+</div>

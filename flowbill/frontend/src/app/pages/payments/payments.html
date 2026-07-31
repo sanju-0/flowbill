@@ -1,0 +1,184 @@
+<div class="payments-page">
+
+  <div class="topbar">
+    <div>
+      <h1 class="page-title">Payments</h1>
+      <p class="page-sub">Track every rupee received</p>
+    </div>
+    <button class="btn-primary" (click)="openAddForm()">
+      <i class="ti ti-plus"></i>
+      Record Payment
+    </button>
+  </div>
+
+  <div class="summary-grid">
+    <div class="summary-card">
+      <div class="summary-label">Total Received</div>
+      <div class="summary-value">{{ formatAmount(totalReceived) }}</div>
+      <div class="summary-sub">{{ filteredPayments.length }} payments</div>
+    </div>
+    <div class="summary-card">
+      <div class="summary-label">This Month</div>
+      <div class="summary-value accent">{{ formatAmount(thisMonthTotal) }}</div>
+      <div class="summary-sub">{{ currentMonth }}</div>
+    </div>
+    <div class="summary-card">
+      <div class="summary-label">Via UPI</div>
+      <div class="summary-value">{{ formatAmount(upiTotal) }}</div>
+      <div class="summary-sub">Most used method</div>
+    </div>
+  </div>
+
+  <div class="month-filters">
+    @for (m of months; track m) {
+    <button class="month-btn" [class.active]="activeMonth() === m" (click)="activeMonth.set(m)">
+      {{ formatMonth(m) }}
+    </button>
+    }
+  </div>
+
+  <div class="payments-list">
+    @for (payment of filteredPayments; track payment.id) {
+    <div class="payment-row">
+      <div class="payment-left">
+        <div class="avatar avatar-accent">
+          {{ getInitials(payment.clientName) }}
+        </div>
+        <div class="payment-info">
+          <div class="payment-client">{{ payment.clientName }}</div>
+          <div class="payment-meta">
+            {{ payment.invoiceNumber }}
+          </div>
+        </div>
+      </div>
+
+      <div class="payment-mode-wrap">
+        <span class="mode-badge" [class]="'mode-' + getModeColor(payment.paymentMode)">
+          <i class="ti {{ getModeIcon(payment.paymentMode) }}"></i>
+          {{ payment.paymentMode }}
+        </span>
+        @if (payment.notes) {
+        <span class="payment-notes">{{ payment.notes }}</span>
+        }
+      </div>
+
+      <div class="payment-right">
+        <div class="payment-amount">+ {{ formatAmount(payment.amountPaid) }}</div>
+        <div class="payment-date">{{ formatDate(payment.paymentDate) }}</div>
+      </div>
+
+      <button class="delete-btn" (click)="deletePayment(payment.id!)">
+        <i class="ti ti-trash"></i>
+      </button>
+    </div>
+    }
+
+    @if (filteredPayments.length === 0) {
+    <div class="empty-state">
+      <i class="ti ti-coin-rupee-off"></i>
+      <p>No payments recorded</p>
+      <span>Record a payment to see it here</span>
+    </div>
+    }
+  </div>
+
+  @if (showAddForm()) {
+  <div class="modal-overlay" (click)="closeAddForm()">
+    <div class="modal" (click)="$event.stopPropagation()">
+
+      <div class="modal-header">
+        <h2 class="modal-title">Record Payment</h2>
+        <button class="close-btn" (click)="closeAddForm()">
+          <i class="ti ti-x"></i>
+        </button>
+      </div>
+
+      <!-- Step 1: Client Select -->
+      <div class="form-group">
+        <label>Select Client *</label>
+        <select [(ngModel)]="newPayment.selectedClientId" (ngModelChange)="onClientSelect($event)" class="form-select">
+          <option value="">— Choose client —</option>
+          @for (client of clients; track client.id) {
+          <option [value]="client.id">{{ client.name }}</option>
+          }
+        </select>
+      </div>
+
+      <!-- Step 2: Invoice Select -->
+      @if (newPayment.selectedClientId) {
+      <div class="form-group">
+        <label>Select Invoice *</label>
+        @if (clientInvoices.length === 0) {
+        <div class="no-invoices">
+          <i class="ti ti-info-circle"></i>
+          No unpaid invoices for this client
+        </div>
+        } @else {
+        <select [(ngModel)]="newPayment.invoiceId" (ngModelChange)="onInvoiceSelect($event)" class="form-select">
+          <option value="">— Choose invoice —</option>
+          @for (inv of clientInvoices; track inv.id) {
+          <option [value]="inv.id">
+            {{ inv.invoiceNumber }} — {{ formatAmount(inv.amount) }}
+          </option>
+          }
+        </select>
+        }
+      </div>
+      }
+
+      <!-- Invoice Preview -->
+      @if (selectedInvoice) {
+      <div class="invoice-preview">
+        <div class="preview-row">
+          <span>Invoice</span>
+          <span>{{ selectedInvoice.invoiceNumber }}</span>
+        </div>
+        <div class="preview-row">
+          <span>Project</span>
+          <span>{{ selectedInvoice.projectTitle }}</span>
+        </div>
+        <div class="preview-row">
+          <span>Total Amount</span>
+          <span class="preview-amount">{{ formatAmount(selectedInvoice.amount) }}</span>
+        </div>
+      </div>
+      }
+
+      <!-- Step 3: Payment Details -->
+      @if (newPayment.invoiceId) {
+      <div class="form-row">
+        <div class="form-group">
+          <label>Amount Paid (₹) *</label>
+          <input type="number" [(ngModel)]="newPayment.amountPaid" placeholder="25000" />
+        </div>
+        <div class="form-group">
+          <label>Payment Date</label>
+          <input type="date" [(ngModel)]="newPayment.paymentDate" />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Payment Mode</label>
+        <select [(ngModel)]="newPayment.paymentMode" class="form-select">
+          @for (mode of paymentModes; track mode) {
+          <option [value]="mode">{{ mode }}</option>
+          }
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Notes</label>
+        <input type="text" [(ngModel)]="newPayment.notes" placeholder="Paid via GPay, reference: XXXX" />
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn-secondary" (click)="closeAddForm()">Cancel</button>
+        <button class="btn-primary" (click)="savePayment()">Save Payment</button>
+      </div>
+      }
+
+    </div>
+  </div>
+  }
+
+</div>

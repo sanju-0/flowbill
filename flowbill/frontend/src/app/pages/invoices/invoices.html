@@ -1,0 +1,249 @@
+<div class="invoices-page">
+
+  <div class="topbar">
+    <div>
+      <h1 class="page-title">Invoices</h1>
+      <p class="page-sub">{{ invoices.length }} total · {{ formatAmount(totalAmount) }} shown</p>
+    </div>
+    <button class="btn-primary" (click)="openCreateForm()">
+      <i class="ti ti-plus"></i>
+      New Invoice
+    </button>
+  </div>
+
+  <div class="filters">
+    @for (filter of filters; track filter) {
+    <button class="filter-btn" [class.active]="activeFilter() === filter" (click)="setFilter(filter)">
+      {{ filter }}
+      <span class="filter-count">{{ getFilterCount(filter) }}</span>
+    </button>
+    }
+  </div>
+
+  <div class="table-wrap">
+    <table class="invoice-table">
+      <thead>
+        <tr>
+          <th>Invoice</th>
+          <th>Client</th>
+          <th>Project</th>
+          <th>Due Date</th>
+          <th>Amount</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (inv of filteredInvoices; track inv.id) {
+        <tr [class.row-overdue]="isOverdue(inv)">
+          <td>
+            <span class="invoice-no">{{ inv.invoiceNumber }}</span>
+          </td>
+          <td>
+            <div class="client-cell">
+              <div class="avatar" [class]="'avatar-' + getAvatarColor(inv.status)">
+                {{ getInitials(inv.clientName) }}
+              </div>
+              {{ inv.clientName }}
+            </div>
+          </td>
+          <td class="project-title">{{ inv.projectTitle }}</td>
+          <td class="date-cell" [class.text-danger]="isOverdue(inv)">
+            {{ formatDate(inv.dueDate) }}
+          </td>
+          <td>
+            <span class="amount-cell">{{ formatAmount(inv.amount) }}</span>
+          </td>
+          <td>
+            <span class="badge" [class]="'badge-' + inv.status.toLowerCase()">
+              {{ inv.status }}
+            </span>
+          </td>
+          <td>
+            <div class="action-btns">
+              @if (inv.status !== 'PAID') {
+              <button class="action-btn success" (click)="markAsPaid(inv.id!)" title="Mark as Paid">
+                <i class="ti ti-check"></i>
+              </button>
+              <button class="action-btn ai" (click)="openEmailModal(inv)" title="AI Reminder">
+                <i class="ti ti-sparkles"></i>
+              </button>
+              }
+              <button class="action-btn danger" (click)="deleteInvoice(inv.id!)" title="Delete">
+                <i class="ti ti-trash"></i>
+              </button>
+            </div>
+          </td>
+        </tr>
+        }
+
+        @if (filteredInvoices.length === 0) {
+        <tr>
+          <td colspan="7">
+            <div class="empty-state">
+              <i class="ti ti-file-off"></i>
+              <p>No invoices found</p>
+            </div>
+          </td>
+        </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+
+  <!-- AI Email Modal -->
+  @if (showEmailModal()) {
+  <div class="modal-overlay" (click)="closeEmailModal()">
+    <div class="modal ai-modal" (click)="$event.stopPropagation()">
+
+      <div class="modal-header">
+        <div>
+          <h2 class="modal-title">AI Reminder Email</h2>
+          <p class="modal-sub">{{ currentInvoice?.clientName }} · {{ formatAmount(currentInvoice?.amount!) }}</p>
+        </div>
+        <button class="close-btn" (click)="closeEmailModal()">
+          <i class="ti ti-x"></i>
+        </button>
+      </div>
+
+      <!-- Tone Selector -->
+      <div class="tone-selector">
+        <p class="tone-label">Select Tone</p>
+        <div class="tone-btns">
+          @for (tone of tones; track tone) {
+          <button class="tone-btn" [class.active]="selectedTone === tone" (click)="selectedTone = tone">
+            {{ tone }}
+          </button>
+          }
+        </div>
+      </div>
+
+      <!-- Generate Button -->
+      <button class="btn-ai" (click)="generateEmail()" [disabled]="generatingEmail()">
+        <i class="ti ti-sparkles"></i>
+        {{ generatingEmail() ? 'Generating...' : 'Generate Email' }}
+      </button>
+
+      <!-- Generated Email -->
+      @if (generatedEmail) {
+      <div class="email-preview">
+        <div class="email-preview-header">
+          <span class="email-preview-label">Generated Email</span>
+          <button class="copy-btn" (click)="copyEmail()">
+            <i class="ti ti-copy"></i> Copy
+          </button>
+        </div>
+        <pre class="email-content">{{ generatedEmail }}</pre>
+      </div>
+
+      <!-- Send Button -->
+      @if (emailSent()) {
+      <div class="email-success">
+        <i class="ti ti-circle-check"></i>
+        Email sent to {{ currentInvoice?.clientEmail }}!
+      </div>
+      } @else {
+      <button class="btn-send" (click)="sendEmail()" [disabled]="sendingEmail()">
+        <i class="ti ti-send"></i>
+        {{ sendingEmail() ? 'Sending...' : 'Send to ' + currentInvoice?.clientEmail }}
+      </button>
+      }
+      }
+
+    </div>
+  </div>
+  }
+
+  <!-- Create Invoice Modal -->
+  @if (showCreateForm()) {
+  <div class="modal-overlay" (click)="closeCreateForm()">
+    <div class="modal" (click)="$event.stopPropagation()">
+
+      <div class="modal-header">
+        <h2 class="modal-title">New Invoice</h2>
+        <button class="close-btn" (click)="closeCreateForm()">
+          <i class="ti ti-x"></i>
+        </button>
+      </div>
+
+      <!-- Client Select -->
+      <div class="form-group">
+        <label>Select Client *</label>
+        <select [(ngModel)]="newInvoice.selectedClientId" (ngModelChange)="onClientSelectForInvoice($event)"
+          class="form-select">
+          <option value="">— Choose client —</option>
+          @for (client of clients; track client.id) {
+          <option [value]="client.id">{{ client.name }}</option>
+          }
+        </select>
+      </div>
+
+      <!-- Project Select -->
+      @if (newInvoice.selectedClientId) {
+      <div class="form-group">
+        <label>Select Project *</label>
+        @if (clientProjects.length === 0) {
+        <div class="no-invoices">
+          <i class="ti ti-info-circle"></i>
+          No projects for this client
+        </div>
+        } @else {
+        <select [(ngModel)]="newInvoice.projectId" (ngModelChange)="onProjectSelect($event)" class="form-select">
+          <option value="">— Choose project —</option>
+          @for (project of clientProjects; track project.id) {
+          <option [value]="project.id">
+            {{ project.title }} — {{ formatAmount(project.totalAmount) }}
+          </option>
+          }
+        </select>
+        }
+      </div>
+      }
+
+      <!-- Project Preview -->
+      @if (selectedProject) {
+      <div class="invoice-preview">
+        <div class="preview-row">
+          <span>Project</span>
+          <span>{{ selectedProject.title }}</span>
+        </div>
+        <div class="preview-row">
+          <span>Invoice No</span>
+          <span>{{ newInvoice.invoiceNumber }}</span>
+        </div>
+        <div class="preview-row">
+          <span>Amount</span>
+          <span class="preview-amount">{{ formatAmount(selectedProject.totalAmount) }}</span>
+        </div>
+      </div>
+      }
+
+      <!-- Invoice Details -->
+      @if (newInvoice.projectId) {
+      <div class="form-group">
+        <label>Amount (₹) *</label>
+        <input type="number" [(ngModel)]="newInvoice.amount" placeholder="25000" />
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Issue Date</label>
+          <input type="date" [(ngModel)]="newInvoice.issueDate" />
+        </div>
+        <div class="form-group">
+          <label>Due Date</label>
+          <input type="date" [(ngModel)]="newInvoice.dueDate" />
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn-secondary" (click)="closeCreateForm()">Cancel</button>
+        <button class="btn-primary" (click)="saveInvoice()">Create Invoice</button>
+      </div>
+      }
+
+    </div>
+  </div>
+  }
+
+</div>
